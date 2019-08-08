@@ -1,4 +1,4 @@
-# Teyu
+# Teyu(手湯)
 
 A Ruby class extension for binding initialize method args to instance vars.  
 Inspired by [attr_extras](https://github.com/barsoom/attr_extras) gem.
