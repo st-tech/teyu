@@ -15,12 +15,12 @@ module Teyu
     end
 
     def apply
-      sorter = Teyu::ArgsSorter.new(@arg_names)
+      argument = Teyu::Argument.new(@arg_names)
       # NOTE: accessing local vars is faster than method calls, so cache to local vars
-      required_positional_args = sorter.required_positional_args
-      required_keyword_args = sorter.required_keyword_args
-      optional_keyword_args = sorter.optional_keyword_args
-      keyword_args = sorter.keyword_args
+      required_positional_args = argument.required_positional_args
+      required_keyword_args = argument.required_keyword_args
+      optional_keyword_args = argument.optional_keyword_args
+      keyword_args = argument.keyword_args
 
       @klass.send(:define_method, :initialize) do |*arg_values|
         if arg_values.last.is_a?(Hash)
@@ -69,7 +69,7 @@ module Teyu
     end
   end
 
-  class ArgsSorter
+  class Argument
     REQUIRED_SYMBOL = '!'.freeze
 
     def initialize(names)
