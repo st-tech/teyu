@@ -1,4 +1,4 @@
-require "test_helper"
+require_relative "test_helper"
 
 class TeyuTest < Test::Unit::TestCase
   def test_that_it_has_a_version_number
