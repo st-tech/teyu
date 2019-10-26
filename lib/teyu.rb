@@ -30,25 +30,40 @@ module Teyu
           positional_arg_values = arg_values
           keyword_arg_values = {}
         end
+        keyword_arg_values_keys = keyword_arg_values.keys
 
         if required_positional_args.count != positional_arg_values.count
           raise ArgumentError, "wrong number of arguments (given #{positional_arg_values.count}, expected #{required_positional_args.count})"
         end
-        missing_keywords = required_keyword_args - keyword_arg_values.keys
+        missing_keywords = required_keyword_args - keyword_arg_values_keys
         raise ArgumentError, "missing keywords: #{missing_keywords.join(', ')}" unless missing_keywords.empty?
-        unknown_keywords = keyword_arg_values.keys - keyword_args
+        unknown_keywords = keyword_arg_values_keys - keyword_args
         raise ArgumentError, "unknown keywords: #{unknown_keywords.join(', ')}" unless unknown_keywords.empty?
 
-        required_positional_args.zip(arg_values).each do |name, value|
+        # NOTE: `while` is faster than `each` because it does not create a so-called "environment"
+        i = 0
+        while i < required_positional_args.size
+          name = required_positional_args[i]
+          value = positional_arg_values[i]
           instance_variable_set(:"@#{name}", value)
+          i += 1
         end
 
-        optional_keyword_args.each do |name, value|
+        default_keyword_args_keys = optional_keyword_args.keys - keyword_arg_values_keys
+        i = 0
+        while i < default_keyword_args_keys.size
+          name = default_keyword_args_keys[i]
+          value = optional_keyword_args[name]
           instance_variable_set(:"@#{name}", value)
+          i += 1
         end
 
-        keyword_arg_values.each do |name, value|
+        i = 0
+        while i < keyword_arg_values_keys.size
+          name = keyword_arg_values_keys[i]
+          value = keyword_arg_values[name]
           instance_variable_set(:"@#{name}", value)
+          i += 1
         end
       end
     end
