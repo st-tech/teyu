@@ -5,9 +5,7 @@ class TeyuTest < Test::Unit::TestCase
     refute_nil ::Teyu::VERSION
   end
 
-  # FYI: name of args type are referenced Method#parameters docs.
-  # https://docs.ruby-lang.org/ja/latest/method/Method/i/parameters.html
-  def test_assign_req_args
+  def test_assign_required_positional_args
     klass = Class.new do
       extend Teyu
       teyu_init :foo, :bar
@@ -18,7 +16,7 @@ class TeyuTest < Test::Unit::TestCase
     assert { example.instance_variable_get('@bar') == 'Bar' }
   end
 
-  def test_lack_of_req_args
+  def test_lack_of_required_positional_args
     klass = Class.new do
       extend Teyu
       teyu_init :foo, :bar
@@ -29,7 +27,7 @@ class TeyuTest < Test::Unit::TestCase
     end
   end
 
-  def test_keyreq_args
+  def test_required_keyword_args
     klass = Class.new do
       extend Teyu
       teyu_init :foo, :bar!
@@ -40,7 +38,7 @@ class TeyuTest < Test::Unit::TestCase
     assert { example.instance_variable_get('@bar') == 'Bar' }
   end
 
-  def test_lack_of_keyreq_args
+  def test_lack_of_required_keyword_args
     klass = Class.new do
       extend Teyu
       teyu_init :foo, :bar!
@@ -51,7 +49,7 @@ class TeyuTest < Test::Unit::TestCase
     end
   end
 
-  def test_key_args
+  def test_optional_keyword_args
     klass = Class.new do
       extend Teyu
       teyu_init :foo, bar: 'Bar'
@@ -62,7 +60,7 @@ class TeyuTest < Test::Unit::TestCase
     assert { example.instance_variable_get('@bar') == 'Bar' }
   end
 
-  def test_overwrites_key_args
+  def test_overwrites_optional_keyword_args
     klass = Class.new do
       extend Teyu
       teyu_init :foo, bar: 'Bar'
@@ -73,7 +71,7 @@ class TeyuTest < Test::Unit::TestCase
     assert { example.instance_variable_get('@bar') == 'BAR' }
   end
 
-  def test_mixed_keyreq_and_key_args
+  def test_mixed_required_and_optional_keyword_args
     klass = Class.new do
       extend Teyu
       teyu_init :foo, :bar, :hoge!, { fuga: 'Fuga' }, { piyo: 'Piyo' }
