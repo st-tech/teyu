@@ -32,8 +32,8 @@ module Teyu
         end
         given_keyword_args_keys = given_keyword_args.keys
 
-        if required_positional_args.count != given_positional_args.count
-          raise ArgumentError, "wrong number of arguments (given #{given_positional_args.count}, expected #{required_positional_args.count})"
+        if required_positional_args.size != given_positional_args.size
+          raise ArgumentError, "wrong number of arguments (given #{given_positional_args.size}, expected #{required_positional_args.size})"
         end
         missing_keywords = required_keyword_args - given_keyword_args_keys
         raise ArgumentError, "missing keywords: #{missing_keywords.join(', ')}" unless missing_keywords.empty?
