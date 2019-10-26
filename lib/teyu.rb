@@ -22,10 +22,6 @@ module Teyu
       optional_keyword_args = sorter.optional_keyword_args
       keyword_args = sorter.keyword_args
 
-      validate_number_of_required_positional_args = method(:validate_number_of_required_positional_args)
-      validate_required_keyword_args = method(:validate_required_keyword_args)
-      validate_keyword_args = method(:validate_keyword_args)
-
       @klass.send(:define_method, :initialize) do |*arg_values|
         if arg_values.last.is_a?(Hash)
           positional_arg_values = arg_values[0...-1]
@@ -35,9 +31,13 @@ module Teyu
           keyword_arg_values = {}
         end
 
-        validate_number_of_required_positional_args.call(required_positional_args, positional_arg_values)
-        validate_required_keyword_args.call(required_keyword_args, keyword_arg_values)
-        validate_keyword_args.call(keyword_args, keyword_arg_values)
+        if required_positional_args.count != positional_arg_values.count
+          raise ArgumentError, "wrong number of arguments (given #{positional_arg_values.count}, expected #{required_positional_args.count})"
+        end
+        missing_keywords = required_keyword_args - keyword_arg_values.keys
+        raise ArgumentError, "missing keywords: #{missing_keywords.join(', ')}" unless missing_keywords.empty?
+        unknown_keywords = keyword_arg_values.keys - keyword_args
+        raise ArgumentError, "unknown keywords: #{unknown_keywords.join(', ')}" unless unknown_keywords.empty?
 
         required_positional_args.zip(arg_values).each do |name, value|
           instance_variable_set(:"@#{name}", value)
@@ -51,24 +51,6 @@ module Teyu
           instance_variable_set(:"@#{name}", value)
         end
       end
-    end
-
-    private
-
-    def validate_number_of_required_positional_args(required_positional_args, positional_arg_values)
-      if required_positional_args.count != positional_arg_values.count
-        raise ArgumentError, "wrong number of arguments (given #{positional_arg_values.count}, expected #{required_positional_args.count})"
-      end
-    end
-
-    def validate_required_keyword_args(required_keyword_args, keyword_arg_values)
-      missing_keywords = required_keyword_args - keyword_arg_values.keys
-      raise ArgumentError, "missing keywords: #{missing_keywords.join(', ')}" unless missing_keywords.empty?
-    end
-
-    def validate_keyword_args(keyword_args, keyword_arg_values)
-      unknown_keywords = keyword_arg_values.keys - keyword_args
-      raise ArgumentError, "unknown keywords: #{unknown_keywords.join(', ')}" unless unknown_keywords.empty?
     end
   end
 
