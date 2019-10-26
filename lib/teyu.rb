@@ -5,7 +5,12 @@ module Teyu
 
   def teyu_init(*params)
     argument = Teyu::Argument.new(params)
-    Teyu::FastInitializer.new(self, argument).define
+    # FastInitializer works faster than GenericInitializer, but does not work with some case.
+    begin
+      Teyu::FastInitializer.new(self, argument).define
+    rescue SyntaxError
+      Teyu::GenericInitializer.new(self, argument).define
+    end
   end
 
   class FastInitializer
@@ -30,16 +35,17 @@ module Teyu
       EOS
     end
 
-    private def def_initialize_args
+    def def_initialize_args
       args = []
       args << "#{@argument.required_positional_args.map(&:to_s).join(', ')}"
       args << "#{@argument.required_keyword_args.map { |arg| "#{arg}:" }.join(', ')}"
+      # LIMITATION: supports only default arguments which can be stringified.
       args << "#{@argument.optional_keyword_args.map { |k, v| "#{k}: #{v.inspect}" }.join(', ')}"
       args.reject! { |arg| arg.empty? }
       args.join(', ')
     end
 
-    private def def_initialize_body
+    def def_initialize_body
       @argument.arg_names.map { |name| "@#{name} = #{name}" }.join("\n  ")
     end
   end

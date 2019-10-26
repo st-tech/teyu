@@ -120,6 +120,17 @@ class TeyuTest < Test::Unit::TestCase
     assert { example.instance_variable_get('@hash') == {key: 1} }
   end
 
+  def test_optional_keyword_args_with_objects
+    obj = Object.new
+    klass = Class.new do
+      extend Teyu
+      teyu_init a: obj
+    end
+
+    example = klass.new()
+    assert { example.instance_variable_get('@a') == obj }
+  end
+
   def test_define_invalid_names
     assert_raises ArgumentError do
       Class.new do
