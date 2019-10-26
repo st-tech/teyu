@@ -5,7 +5,7 @@ class TeyuTest < Test::Unit::TestCase
     refute_nil ::Teyu::VERSION
   end
 
-  def test_assign_required_positional_args
+  def test_assign_positional_args
     klass = Class.new do
       extend Teyu
       teyu_init :foo, :bar
@@ -16,7 +16,7 @@ class TeyuTest < Test::Unit::TestCase
     assert { example.instance_variable_get('@bar') == 'Bar' }
   end
 
-  def test_lack_of_required_positional_args
+  def test_lack_of_positional_args
     klass = Class.new do
       extend Teyu
       teyu_init :foo, :bar
@@ -24,6 +24,17 @@ class TeyuTest < Test::Unit::TestCase
 
     assert_raises ArgumentError do
       klass.new('Foo')
+    end
+  end
+
+  def test_unnecessary_positional_args
+    klass = Class.new do
+      extend Teyu
+      teyu_init :foo, :bar
+    end
+
+    assert_raises ArgumentError do
+      klass.new('Foo', 'Bar', 'Baz')
     end
   end
 
@@ -38,7 +49,7 @@ class TeyuTest < Test::Unit::TestCase
     assert { example.instance_variable_get('@bar') == 'Bar' }
   end
 
-  def test_lack_of_required_keyword_args
+  def test_missing_keyword_args
     klass = Class.new do
       extend Teyu
       teyu_init :foo, :bar!
@@ -46,6 +57,17 @@ class TeyuTest < Test::Unit::TestCase
 
     assert_raises ArgumentError do
       klass.new('Foo')
+    end
+  end
+
+  def test_unknown_keyword_args
+    klass = Class.new do
+      extend Teyu
+      teyu_init :foo, :bar!
+    end
+
+    assert_raises ArgumentError do
+      klass.new('Foo', bar: 'Bar', baz: 'Baz')
     end
   end
 
