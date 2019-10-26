@@ -106,5 +106,27 @@ class TeyuTest < Test::Unit::TestCase
     assert { example.instance_variable_get('@fuga') == 'Fuga' }
     assert { example.instance_variable_get('@piyo') == 'PIYO' }
   end
+
+  def test_optional_keyword_args_with_various_types
+    klass = Class.new do
+      extend Teyu
+      teyu_init str: 'str', int: 1, arr: [1, '1'], hash: {key: 1}
+    end
+
+    example = klass.new
+    assert { example.instance_variable_get('@str') == 'str' }
+    assert { example.instance_variable_get('@int') == 1 }
+    assert { example.instance_variable_get('@arr') == [1, '1'] }
+    assert { example.instance_variable_get('@hash') == {key: 1} }
+  end
+
+  def test_define_invalid_names
+    assert_raises ArgumentError do
+      Class.new do
+        extend Teyu
+        teyu_init :"a); File.read('/etc/password'); def initialize("
+      end
+    end
+  end
 end
 

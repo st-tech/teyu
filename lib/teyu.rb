@@ -4,23 +4,60 @@ module Teyu
   class Error < StandardError; end
 
   def teyu_init(*params)
-    define_initializer = DefineInitializer.new(self, params)
-    define_initializer.apply
+    argument = Teyu::Argument.new(params)
+    Teyu::FastInitializer.new(self, argument).define
   end
 
-  class DefineInitializer
-    def initialize(klass, params)
+  class FastInitializer
+    # @param [Class] klass
+    # @param [Teyu::Argument] argument
+    def initialize(klass, argument)
       @klass = klass
-      @params = params
+      @argument = argument
     end
 
-    def apply
-      argument = Teyu::Argument.new(@params)
+    def define
+      @klass.class_eval(def_initialize, __FILE__, __LINE__)
+    end
+
+    private
+
+    def def_initialize
+      <<~EOS
+      def initialize(#{def_initialize_args})
+        #{def_initialize_body}
+      end
+      EOS
+    end
+
+    private def def_initialize_args
+      args = []
+      args << "#{@argument.required_positional_args.map(&:to_s).join(', ')}"
+      args << "#{@argument.required_keyword_args.map { |arg| "#{arg}:" }.join(', ')}"
+      args << "#{@argument.optional_keyword_args.map { |k, v| "#{k}: #{v.inspect}" }.join(', ')}"
+      args.reject! { |arg| arg.empty? }
+      args.join(', ')
+    end
+
+    private def def_initialize_body
+      @argument.arg_names.map { |name| "@#{name} = #{name}" }.join("\n  ")
+    end
+  end
+
+  class GenericInitializer
+    # @param [Class] klass
+    # @param [Teyu::Argument] argument
+    def initialize(klass, argument)
+      @klass = klass
+      @argument = argument
+    end
+
+    def define
       # NOTE: accessing local vars is faster than method calls, so cache to local vars
-      required_positional_args = argument.required_positional_args
-      required_keyword_args = argument.required_keyword_args
-      optional_keyword_args = argument.optional_keyword_args
-      keyword_args = argument.keyword_args
+      required_positional_args = @argument.required_positional_args
+      required_keyword_args = @argument.required_keyword_args
+      optional_keyword_args = @argument.optional_keyword_args
+      keyword_args = @argument.keyword_args
 
       @klass.define_method(:initialize) do |*given_args|
         if given_args.last.is_a?(Hash)
@@ -71,9 +108,23 @@ module Teyu
 
   class Argument
     REQUIRED_SYMBOL = '!'.freeze
+    VARIABLE_NAME_REGEXP = /\A[a-z_][a-z0-9_]*\z/
 
     def initialize(params)
       @params = params
+      validate
+    end
+
+    private def validate
+      invalid_variable_names = arg_names.reject { |name| VARIABLE_NAME_REGEXP.match?(name) }
+      unless invalid_variable_names.empty?
+        raise ArgumentError, "invalid variable names: #{invalid_variable_names.join(', ')}"
+      end
+    end
+
+    # @return [Array<Symbol>] names of arguments
+    def arg_names
+      @arg_names ||= required_positional_args + required_keyword_args + optional_keyword_args.keys
     end
 
     # method(a, b) => [:a, :b]
@@ -92,7 +143,7 @@ module Teyu
     # @return [Array<Symbol>] names of required keyword arguments
     def required_keyword_args
       @required_keyword_args ||= @params.map(&:to_s).select { |arg| arg.end_with?(REQUIRED_SYMBOL) }
-                         .map { |arg| arg.delete_suffix(REQUIRED_SYMBOL).to_sym }
+        .map { |arg| arg.delete_suffix(REQUIRED_SYMBOL).to_sym }
     end
 
     # method(a: 'a', b: 'b') => { a: 'a', b: 'b' }
