@@ -22,34 +22,34 @@ module Teyu
       optional_keyword_args = argument.optional_keyword_args
       keyword_args = argument.keyword_args
 
-      @klass.send(:define_method, :initialize) do |*arg_values|
-        if arg_values.last.is_a?(Hash)
-          positional_arg_values = arg_values[0...-1]
-          keyword_arg_values = arg_values.last
+      @klass.send(:define_method, :initialize) do |*given_args|
+        if given_args.last.is_a?(Hash)
+          given_positional_args = given_args[0...-1]
+          given_keyword_args = given_args.last
         else
-          positional_arg_values = arg_values
-          keyword_arg_values = {}
+          given_positional_args = given_args
+          given_keyword_args = {}
         end
-        keyword_arg_values_keys = keyword_arg_values.keys
+        given_keyword_args_keys = given_keyword_args.keys
 
-        if required_positional_args.count != positional_arg_values.count
-          raise ArgumentError, "wrong number of arguments (given #{positional_arg_values.count}, expected #{required_positional_args.count})"
+        if required_positional_args.count != given_positional_args.count
+          raise ArgumentError, "wrong number of arguments (given #{given_positional_args.count}, expected #{required_positional_args.count})"
         end
-        missing_keywords = required_keyword_args - keyword_arg_values_keys
+        missing_keywords = required_keyword_args - given_keyword_args_keys
         raise ArgumentError, "missing keywords: #{missing_keywords.join(', ')}" unless missing_keywords.empty?
-        unknown_keywords = keyword_arg_values_keys - keyword_args
+        unknown_keywords = given_keyword_args_keys - keyword_args
         raise ArgumentError, "unknown keywords: #{unknown_keywords.join(', ')}" unless unknown_keywords.empty?
 
         # NOTE: `while` is faster than `each` because it does not create a so-called "environment"
         i = 0
         while i < required_positional_args.size
           name = required_positional_args[i]
-          value = positional_arg_values[i]
+          value = given_positional_args[i]
           instance_variable_set(:"@#{name}", value)
           i += 1
         end
 
-        default_keyword_args_keys = optional_keyword_args.keys - keyword_arg_values_keys
+        default_keyword_args_keys = optional_keyword_args.keys - given_keyword_args_keys
         i = 0
         while i < default_keyword_args_keys.size
           name = default_keyword_args_keys[i]
@@ -59,9 +59,9 @@ module Teyu
         end
 
         i = 0
-        while i < keyword_arg_values_keys.size
-          name = keyword_arg_values_keys[i]
-          value = keyword_arg_values[name]
+        while i < given_keyword_args_keys.size
+          name = given_keyword_args_keys[i]
+          value = given_keyword_args[name]
           instance_variable_set(:"@#{name}", value)
           i += 1
         end
