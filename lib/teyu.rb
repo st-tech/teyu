@@ -22,7 +22,7 @@ module Teyu
       optional_keyword_args = argument.optional_keyword_args
       keyword_args = argument.keyword_args
 
-      @klass.send(:define_method, :initialize) do |*given_args|
+      @klass.define_method(:initialize) do |*given_args|
         if given_args.last.is_a?(Hash)
           given_positional_args = given_args[0...-1]
           given_keyword_args = given_args.last
