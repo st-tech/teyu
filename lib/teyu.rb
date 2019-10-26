@@ -3,19 +3,19 @@ require "teyu/version"
 module Teyu
   class Error < StandardError; end
 
-  def teyu_init(*arg_names)
-    define_initializer = DefineInitializer.new(self, arg_names)
+  def teyu_init(*params)
+    define_initializer = DefineInitializer.new(self, params)
     define_initializer.apply
   end
 
   class DefineInitializer
-    def initialize(klass, arg_names)
+    def initialize(klass, params)
       @klass = klass
-      @arg_names = arg_names
+      @params = params
     end
 
     def apply
-      argument = Teyu::Argument.new(@arg_names)
+      argument = Teyu::Argument.new(@params)
       # NOTE: accessing local vars is faster than method calls, so cache to local vars
       required_positional_args = argument.required_positional_args
       required_keyword_args = argument.required_keyword_args
@@ -72,14 +72,14 @@ module Teyu
   class Argument
     REQUIRED_SYMBOL = '!'.freeze
 
-    def initialize(names)
-      @names = names
+    def initialize(params)
+      @params = params
     end
 
     # method(a, b) => [:a, :b]
     # @return [Array<Symbol>] names of required positional arguments
     def required_positional_args
-      @required_positional_args ||= @names.take_while { |arg| !arg.is_a?(Hash) && !arg.to_s.end_with?(REQUIRED_SYMBOL) }
+      @required_positional_args ||= @params.take_while { |arg| !arg.is_a?(Hash) && !arg.to_s.end_with?(REQUIRED_SYMBOL) }
     end
 
     # method(a!:, b: 'b') => [:a, :b]
@@ -91,14 +91,14 @@ module Teyu
     # method(a!:, b!:) => [:a, :b]
     # @return [Array<Symbol>] names of required keyword arguments
     def required_keyword_args
-      @required_keyword_args ||= @names.map(&:to_s).select { |arg| arg.end_with?(REQUIRED_SYMBOL) }
+      @required_keyword_args ||= @params.map(&:to_s).select { |arg| arg.end_with?(REQUIRED_SYMBOL) }
                          .map { |arg| arg.delete_suffix(REQUIRED_SYMBOL).to_sym }
     end
 
     # method(a: 'a', b: 'b') => { a: 'a', b: 'b' }
     # @return [Hash] optional keyword arguments with their default values
     def optional_keyword_args
-      @optional_keyword_args ||= @names.select { |arg| arg.is_a?(Hash) }&.inject(:merge) || {}
+      @optional_keyword_args ||= @params.select { |arg| arg.is_a?(Hash) }&.inject(:merge) || {}
     end
   end
 end
