@@ -91,14 +91,14 @@ module Teyu
     # method(a!:, b!:) => [:a, :b]
     # @return [Array<Symbol>] names of required keyword arguments
     def required_keyword_args
-      @required_keyword_args ||= @names.map(&:to_s).filter { |arg| arg.end_with?(REQUIRED_SYMBOL) }
+      @required_keyword_args ||= @names.map(&:to_s).select { |arg| arg.end_with?(REQUIRED_SYMBOL) }
                          .map { |arg| arg.delete_suffix(REQUIRED_SYMBOL).to_sym }
     end
 
     # method(a: 'a', b: 'b') => { a: 'a', b: 'b' }
     # @return [Hash] optional keyword arguments with their default values
     def optional_keyword_args
-      @optional_keyword_args ||= @names.filter { |arg| arg.is_a?(Hash) }&.inject(:merge) || {}
+      @optional_keyword_args ||= @names.select { |arg| arg.is_a?(Hash) }&.inject(:merge) || {}
     end
   end
 end
