@@ -14,8 +14,6 @@ module Teyu
   end
 
   class FastInitializer
-    # @param [Class] klass
-    # @param [Teyu::Argument] argument
     def initialize(klass, argument)
       @klass = klass
       @argument = argument
@@ -25,9 +23,7 @@ module Teyu
       @klass.class_eval(def_initialize, __FILE__, __LINE__)
     end
 
-    private
-
-    def def_initialize
+    private def def_initialize
       <<~EOS
       def initialize(#{def_initialize_args})
         #{def_initialize_body}
@@ -35,24 +31,21 @@ module Teyu
       EOS
     end
 
-    def def_initialize_args
+    private def def_initialize_args
       args = []
       args << "#{@argument.required_positional_args.map(&:to_s).join(', ')}"
       args << "#{@argument.required_keyword_args.map { |arg| "#{arg}:" }.join(', ')}"
       # LIMITATION: supports only default arguments which can be stringified.
       args << "#{@argument.optional_keyword_args.map { |k, v| "#{k}: #{v.inspect}" }.join(', ')}"
-      args.reject! { |arg| arg.empty? }
-      args.join(', ')
+      args.reject { |arg| arg.empty? }.join(', ')
     end
 
-    def def_initialize_body
+    private def def_initialize_body
       @argument.arg_names.map { |name| "@#{name} = #{name}" }.join("\n  ")
     end
   end
 
   class GenericInitializer
-    # @param [Class] klass
-    # @param [Teyu::Argument] argument
     def initialize(klass, argument)
       @klass = klass
       @argument = argument
