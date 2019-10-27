@@ -1,4 +1,5 @@
 require_relative "test_helper"
+require 'ostruct'
 
 class TeyuTest < Test::Unit::TestCase
   def test_that_it_has_a_version_number
@@ -121,7 +122,7 @@ class TeyuTest < Test::Unit::TestCase
   end
 
   def test_optional_keyword_args_with_objects
-    obj = Object.new
+    obj = OpenStruct.new(k: "v")
     klass = Class.new do
       extend Teyu
       teyu_init a: obj
@@ -129,6 +130,17 @@ class TeyuTest < Test::Unit::TestCase
 
     example = klass.new()
     assert { example.instance_variable_get('@a') == obj }
+  end
+
+  def test_optional_keyword_args_that_values_are_newly_created
+    klass = Class.new do
+      extend Teyu
+      teyu_init :foo, bar: 'Bar'
+    end
+
+    bar1 = klass.new('Foo').instance_variable_get('@bar')
+    bar2 = klass.new('Foo').instance_variable_get('@bar')
+    assert { bar1.object_id != bar2.object_id }
   end
 
   def test_define_invalid_names

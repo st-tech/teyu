@@ -5,10 +5,9 @@ module Teyu
 
   def teyu_init(*params)
     argument = Teyu::Argument.new(params)
-    # FastInitializer works faster than GenericInitializer, but does not work with some case.
     begin
       Teyu::FastInitializer.new(self, argument).define
-    rescue SyntaxError
+    rescue SyntaxError  # fallback to slow, but generic initializer if failed
       Teyu::GenericInitializer.new(self, argument).define
     end
   end
@@ -35,7 +34,9 @@ module Teyu
       args = []
       args << "#{@argument.required_positional_args.map(&:to_s).join(', ')}"
       args << "#{@argument.required_keyword_args.map { |arg| "#{arg}:" }.join(', ')}"
-      # LIMITATION: supports only default arguments which can be stringified.
+      # LIMITATION:
+      # supports only default values which can be stringified such as `1`, `"a"`, `[1]`, `{a: 1}`.
+      # Note that the default value objects are newly created everytime on a method call.
       args << "#{@argument.optional_keyword_args.map { |k, v| "#{k}: #{v.inspect}" }.join(', ')}"
       args.reject { |arg| arg.empty? }.join(', ')
     end
@@ -90,6 +91,25 @@ module Teyu
         while i < default_keyword_args_keys.size
           name = default_keyword_args_keys[i]
           value = optional_keyword_args[name]
+          # NOTE: In Ruby, objects of default arguments are newly created everytime on a method call.
+          #
+          #     def test(a: "a")
+          #       puts a.object_id
+          #     end
+          #     test #=> 70273097887660
+          #     test #=> 70273097887860
+          #
+          # In a method argument, it is possible to suppress the new object creation like:
+          #
+          #     $a = "a"
+          #     def test(a: $a)
+          #       puts a.object_id
+          #     end
+          #     test #=> 70273097887860
+          #     test #=> 70273097887860
+          #
+          # But, we do not support a such feature in this gem. That's why we `dup` here.
+          value = value.dup
           instance_variable_set(:"@#{name}", value)
           i += 1
         end
