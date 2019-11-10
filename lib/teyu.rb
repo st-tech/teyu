@@ -3,89 +3,102 @@ require "teyu/version"
 module Teyu
   class Error < StandardError; end
 
-  def teyu_init(*arg_names)
-    define_initializer = DefineInitializer.new(self, arg_names)
+  def teyu_init(*params)
+    define_initializer = DefineInitializer.new(self, params)
     define_initializer.apply
   end
 
   class DefineInitializer
-    def initialize(klass, arg_names)
+    def initialize(klass, params)
       @klass = klass
-      @arg_names = arg_names
+      @params = params
     end
 
     def apply
-      sorter = Teyu::ArgsSorter.new(@arg_names)
+      argument = Teyu::Argument.new(@params)
+      # NOTE: accessing local vars is faster than method calls, so cache to local vars
+      required_positional_args = argument.required_positional_args
+      required_keyword_args = argument.required_keyword_args
+      optional_keyword_args = argument.optional_keyword_args
+      keyword_args = argument.keyword_args
 
-      validate_number_of_req_args = method(:validate_number_of_req_args)
-      validate_keyreq_args = method(:validate_keyreq_args)
+      @klass.define_method(:initialize) do |*given_args|
+        if given_args.last.is_a?(Hash)
+          given_positional_args = given_args[0...-1]
+          given_keyword_args = given_args.last
+        else
+          given_positional_args = given_args
+          given_keyword_args = {}
+        end
+        given_keyword_args_keys = given_keyword_args.keys
 
-      @klass.send(:define_method, :initialize) do |*arg_values|
-        validate_number_of_req_args.call(sorter.req_args, arg_values)
-        validate_keyreq_args.call(sorter.keyreq_args, arg_values)
+        if required_positional_args.size != given_positional_args.size
+          raise ArgumentError, "wrong number of arguments (given #{given_positional_args.size}, expected #{required_positional_args.size})"
+        end
+        missing_keywords = required_keyword_args - given_keyword_args_keys
+        raise ArgumentError, "missing keywords: #{missing_keywords.join(', ')}" unless missing_keywords.empty?
+        unknown_keywords = given_keyword_args_keys - keyword_args
+        raise ArgumentError, "unknown keywords: #{unknown_keywords.join(', ')}" unless unknown_keywords.empty?
 
-        sorter.req_args.zip(arg_values).each do |name, value|
+        # NOTE: `while` is faster than `each` because it does not create a so-called "environment"
+        i = 0
+        while i < required_positional_args.size
+          name = required_positional_args[i]
+          value = given_positional_args[i]
           instance_variable_set(:"@#{name}", value)
+          i += 1
         end
 
-        sorter.key_args.each do |name, value|
+        default_keyword_args_keys = optional_keyword_args.keys - given_keyword_args_keys
+        i = 0
+        while i < default_keyword_args_keys.size
+          name = default_keyword_args_keys[i]
+          value = optional_keyword_args[name]
           instance_variable_set(:"@#{name}", value)
+          i += 1
         end
 
-        keyword_arg_values = arg_values[sorter.req_args.length..].find { |value| value.is_a?(Hash) } || {}
-        (sorter.keyword_args & keyword_arg_values.keys).each do |name|
-          instance_variable_set(:"@#{name}", keyword_arg_values[name])
+        i = 0
+        while i < given_keyword_args_keys.size
+          name = given_keyword_args_keys[i]
+          value = given_keyword_args[name]
+          instance_variable_set(:"@#{name}", value)
+          i += 1
         end
-      end
-    end
-
-    private
-
-    def validate_number_of_req_args(arg_names, arg_values)
-      req_arg_names_count = arg_names.count
-      req_arg_values_count = arg_values.filter { |value| !value.is_a?(Hash) }.count
-
-      raise ArgumentError, "wrong number of arguments (given #{req_arg_values_count}, expected #{req_arg_names_count})" if req_arg_names_count != req_arg_values_count
-    end
-
-    def validate_keyreq_args(arg_names, arg_values)
-      arg_names.each do |name|
-        keyword_arg_keys = arg_values.find { |value| value.is_a?(Hash) }&.keys || []
-        raise ArgumentError, "(missing keyword: #{name})" unless keyword_arg_keys.include?(name)
       end
     end
   end
 
-  class ArgsSorter
+  class Argument
     REQUIRED_SYMBOL = '!'.freeze
 
-    def initialize(names)
-      @names = names
+    def initialize(params)
+      @params = params
     end
 
     # method(a, b) => [:a, :b]
-    # @return [Array<Symbol>] req arg names
-    def req_args
-      @req_args ||= @names.take_while { |arg| !arg.is_a?(Hash) && !arg.to_s.end_with?(REQUIRED_SYMBOL) }
+    # @return [Array<Symbol>] names of required positional arguments
+    def required_positional_args
+      @required_positional_args ||= @params.take_while { |arg| !arg.is_a?(Hash) && !arg.to_s.end_with?(REQUIRED_SYMBOL) }
     end
 
     # method(a!:, b: 'b') => [:a, :b]
-    # @return [Array<Symbol>] keyword arg names
+    # @return [Array<Symbol>] names of keyword arguments
     def keyword_args
-      @keyword_args ||= keyreq_args + key_args.keys
+      @keyword_args ||= required_keyword_args + optional_keyword_args.keys
     end
 
     # method(a!:, b!:) => [:a, :b]
-    # @return [Array<Symbol>] keyreq arg names
-    def keyreq_args
-      @keyreq_args ||= @names.map(&:to_s).filter { |arg| arg.end_with?(REQUIRED_SYMBOL) }
+    # @return [Array<Symbol>] names of required keyword arguments
+    def required_keyword_args
+      @required_keyword_args ||= @params.map(&:to_s).select { |arg| arg.end_with?(REQUIRED_SYMBOL) }
                          .map { |arg| arg.delete_suffix(REQUIRED_SYMBOL).to_sym }
     end
 
     # method(a: 'a', b: 'b') => { a: 'a', b: 'b' }
-    # @return [Hash] keyword args with default value
-    def key_args
-      @key_args ||= @names.filter { |arg| arg.is_a?(Hash) }&.inject(:merge) || {}
+    # @return [Hash] optional keyword arguments with their default values
+    def optional_keyword_args
+      @optional_keyword_args ||= @params.select { |arg| arg.is_a?(Hash) }&.inject(:merge) || {}
     end
   end
 end
