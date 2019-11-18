@@ -3,7 +3,7 @@ require "teyu/generic_initializer"
 
 module Teyu
   # This initializer tries the fast initializer, and then fallback to generic initializer if failed.
-  class PerfectInitializer
+  class Initializer
     def initialize(klass, argument)
       @klass = klass
       @argument = argument

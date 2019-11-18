@@ -1,10 +1,10 @@
 require "teyu/version"
 require "teyu/argument"
-require "teyu/perfect_initializer"
+require "teyu/initializer"
 
 module Teyu
   def teyu_init(*params)
     argument = Teyu::Argument.new(params)
-    Teyu::PerfectInitializer.new(self, argument).define
+    Teyu::Initializer.new(self, argument).define
   end
 end
