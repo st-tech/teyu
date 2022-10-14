@@ -1,3 +1,5 @@
+This library is no longer mainteined.
+
 # Teyu(手湯)
 
 A Ruby class extension for binding initialize method args to instance vars.  
